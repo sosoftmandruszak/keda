@@ -5,6 +5,7 @@
 package mock_scaling
 
 import (
+	"github.com/kedacore/keda/v2/pkg/scaling"
 	reflect "reflect"
 
 	gomock "github.com/golang/mock/gomock"
@@ -55,6 +56,11 @@ func (m *MockScaleHandler) GetScalers(scalableObject interface{}) ([]scalers.Sca
 	ret0, _ := ret[0].([]scalers.Scaler)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
+}
+
+func (m *MockScaleHandler) GetScalersCache(scalableObject interface{}) (*scaling.ScalersCache, error) {
+	m.ctrl.T.Helper()
+	return nil, nil
 }
 
 // GetScalers indicates an expected call of GetScalers.

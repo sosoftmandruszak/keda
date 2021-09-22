@@ -93,13 +93,17 @@ func (p *KedaProvider) GetExternalMetric(ctx context.Context, namespace string, 
 
 	scaledObject := &scaledObjects.Items[0]
 	matchingMetrics := []external_metrics.ExternalMetricValue{}
-	scalers, err := p.scaleHandler.GetScalers(scaledObject)
+	cache, err := p.scaleHandler.GetScalersCache(scaledObject)
+	if err != nil {
+		return nil, err
+	}
+
 	metricsServer.RecordScalerObjectError(scaledObject.Namespace, scaledObject.Name, err)
 	if err != nil {
 		return nil, fmt.Errorf("error when getting scalers %s", err)
 	}
 
-	for scalerIndex, scaler := range scalers {
+	for scalerIndex, scaler := range cache.GetScalers() {
 		metricSpecs := scaler.GetMetricSpecForScaling()
 		scalerName := strings.Replace(fmt.Sprintf("%T", scaler), "*scalers.", "", 1)
 

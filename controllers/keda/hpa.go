@@ -160,14 +160,13 @@ func (r *ScaledObjectReconciler) getScaledObjectMetricSpecs(logger logr.Logger, 
 	var externalMetricNames []string
 	var resourceMetricNames []string
 
-	scalers, err := r.scaleHandler.GetScalers(scaledObject)
+	cache, err := r.scaleHandler.GetScalersCache(scaledObject)
 	if err != nil {
 		logger.Error(err, "Error getting scalers")
 		return nil, err
 	}
 
-	for _, scaler := range scalers {
-		metricSpecs := scaler.GetMetricSpecForScaling()
+		metricSpecs := cache.GetMetricSpecForScaling()
 
 		for _, metricSpec := range metricSpecs {
 			if metricSpec.Resource != nil {
@@ -187,8 +186,6 @@ func (r *ScaledObjectReconciler) getScaledObjectMetricSpecs(logger logr.Logger, 
 			}
 		}
 		scaledObjectMetricSpecs = append(scaledObjectMetricSpecs, metricSpecs...)
-		scaler.Close()
-	}
 
 	// sort metrics in ScaledObject, this way we always check the same resource in Reconcile loop and we can prevent unnecessary HPA updates,
 	// see https://github.com/kedacore/keda/issues/1531 for details
