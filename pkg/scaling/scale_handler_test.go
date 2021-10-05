@@ -20,6 +20,9 @@ import (
 	"context"
 	"errors"
 	"github.com/golang/mock/gomock"
+	kedav1alpha1 "github.com/kedacore/keda/v2/apis/keda/v1alpha1"
+	mock_scalers "github.com/kedacore/keda/v2/pkg/mock/mock_scaler"
+	"github.com/kedacore/keda/v2/pkg/scalers"
 	"github.com/stretchr/testify/assert"
 	"k8s.io/api/autoscaling/v2beta2"
 	"k8s.io/apimachinery/pkg/api/resource"
@@ -27,10 +30,6 @@ import (
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sync"
 	"testing"
-
-	kedav1alpha1 "github.com/kedacore/keda/v2/apis/keda/v1alpha1"
-	mock_scalers "github.com/kedacore/keda/v2/pkg/mock/mock_scaler"
-	"github.com/kedacore/keda/v2/pkg/scalers"
 )
 
 func TestCheckScaledObjectScalersWithError(t *testing.T) {
@@ -58,35 +57,38 @@ func TestCheckScaledObjectScalersWithError(t *testing.T) {
 }
 
 func TestCheckScaledObjectFindFirstActiveIgnoringOthers(t *testing.T) {
-	//ctrl := gomock.NewController(t)
-	//client := mock_client.NewMockClient(ctrl)
-	//recorder := record.NewFakeRecorder(1)
+	ctrl := gomock.NewController(t)
+	recorder := record.NewFakeRecorder(1)
+	activeScaler := mock_scalers.NewMockScaler(ctrl)
+	failingScaler := mock_scalers.NewMockScaler(ctrl)
+	scaledObject := &kedav1alpha1.ScaledObject{}
 
-	//scaleHandler := &scaleHandler{
-	//	client:            client,
-	//	logger:            logf.Log.WithName("scalehandler"),
-	//	scaleLoopContexts: &sync.Map{},
-	//	scaleExecutor:     executor.NewScaleExecutor(client, nil, nil, recorder),
-	//	globalHTTPTimeout: 5 * time.Second,
-	//	recorder:          recorder,
-	//}
-	//
-	//activeScaler := mock_scalers.NewMockScaler(ctrl)
-	//failingScaler := mock_scalers.NewMockScaler(ctrl)
-	//scalers := []scalers.Scaler{activeScaler, failingScaler}
-	//scaledObject := &kedav1alpha1.ScaledObject{}
+	metricsSpecs := []v2beta2.MetricSpec{createMetricSpec(1)}
 
-	//metricsSpecs := []v2beta2.MetricSpec{createMetricSpec(1)}
+	activeScaler.EXPECT().IsActive(gomock.Any()).Return(true, nil)
+	activeScaler.EXPECT().GetMetricSpecForScaling().Times(2).Return(metricsSpecs)
+	activeScaler.EXPECT().Close()
+	failingScaler.EXPECT().Close()
+	obj, err := asDuckWithTriggers(scaledObject)
+	assert.Nil(t, err)
+	scalersCache := ScalersCache{
+		scalers: []scalers.Scaler{activeScaler, failingScaler},
+		logger: logf.Log.WithName("scalercache"),
+		object: obj,
+		lock: &sync.RWMutex{},
+		builders: []func() (scalers.Scaler, error){func() (scalers.Scaler, error) {
+			return mock_scalers.NewMockScaler(ctrl), nil
+		}, func() (scalers.Scaler, error) {
+			return mock_scalers.NewMockScaler(ctrl), nil
+		}},
+		recorder: recorder,
+	}
 
-	//activeScaler.EXPECT().IsActive(gomock.Any()).Return(true, nil)
-	//activeScaler.EXPECT().GetMetricSpecForScaling().Times(2).Return(metricsSpecs)
-	//activeScaler.EXPECT().Close()
-	//failingScaler.EXPECT().Close()
+	isActive, isError, _ := scalersCache.IsScaledObjectActive(context.TODO())
+	scalersCache.Close()
 
-	//isActive, isError := scaleHandler.isScaledObjectActive(context.TODO(), scalers, scaledObject)
-	//
-	//assert.Equal(t, true, isActive)
-	//assert.Equal(t, false, isError)
+	assert.Equal(t, true, isActive)
+	assert.Equal(t, false, isError)
 }
 
 func createMetricSpec(averageValue int) v2beta2.MetricSpec {
