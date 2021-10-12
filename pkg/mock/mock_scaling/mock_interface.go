@@ -8,6 +8,8 @@ import (
 	context "context"
 	reflect "reflect"
 
+	"github.com/kedacore/keda/v2/pkg/scaling/cache"
+
 	gomock "github.com/golang/mock/gomock"
 	scalers "github.com/kedacore/keda/v2/pkg/scalers"
 )
@@ -58,8 +60,21 @@ func (m *MockScaleHandler) GetScalers(ctx context.Context, scalableObject interf
 	return ret0, ret1
 }
 
+func (m *MockScaleHandler) GetScalersCache(_ context.Context, scalableObject interface{}) (*cache.ScalersCache, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetScalersCache", scalableObject)
+	ret0, _ := ret[0].(*cache.ScalersCache)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+func (m *MockScaleHandler) ClearScalersCache(_ context.Context, name, namespace string) {
+	m.ctrl.T.Helper()
+	m.ctrl.Call(m, "ClearScalersCache", name, namespace)
+}
+
 // GetScalers indicates an expected call of GetScalers.
-func (mr *MockScaleHandlerMockRecorder) GetScalers(ctx, scalableObject interface{}) *gomock.Call {
+func (mr *MockScaleHandlerMockRecorder) GetScalers(ctx context.Context, scalableObject interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetScalers", reflect.TypeOf((*MockScaleHandler)(nil).GetScalers), ctx, scalableObject)
 }
